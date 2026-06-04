@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		B7A6641A2FD147D800B1E794 /* .gitignore in Sources */ = {isa = PBXBuildFile; fileRef = B7A664192FD147D200B1E794 /* .gitignore */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		B7A663FD2FD1479C00B1E794 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -31,7 +27,6 @@
 		B7A663EF2FD1479A00B1E794 /* Cardly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cardly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B7A663FC2FD1479C00B1E794 /* CardlyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CardlyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B7A664062FD1479C00B1E794 /* CardlyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CardlyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		B7A664192FD147D200B1E794 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -80,7 +75,6 @@
 		B7A663E62FD1479A00B1E794 = {
 			isa = PBXGroup;
 			children = (
-				B7A664192FD147D200B1E794 /* .gitignore */,
 				B7A663F12FD1479A00B1E794 /* Cardly */,
 				B7A663FF2FD1479C00B1E794 /* CardlyTests */,
 				B7A664092FD1479C00B1E794 /* CardlyUITests */,
@@ -242,7 +236,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B7A6641A2FD147D800B1E794 /* .gitignore in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
