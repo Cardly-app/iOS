@@ -9,29 +9,39 @@
 import SwiftUI
 
 enum Route: Hashable {
-    case create, preview, study, result
+    case create
+    case preview(DraftDeck)
+    case study
+    case result
 }
 
 struct ContentView: View {
     @Environment(AuthService.self) private var auth
+    @Environment(DeckStore.self) private var deckStore
     @State private var path: [Route] = []
 
     var body: some View {
-        if auth.currentUser == nil {
-            LoginView()
-        } else {
-            NavigationStack(path: $path) {
-                MainTabView(
-                    onCreate: { path.append(.create) },
-                    onReview: { path.append(.study) }
-                )
-                .toolbar(.hidden, for: .navigationBar)
-                .navigationDestination(for: Route.self) { route in
-                    destination(route)
-                        .toolbar(.hidden, for: .navigationBar)
+        Group {
+            if auth.currentUser == nil {
+                LoginView()
+            } else {
+                NavigationStack(path: $path) {
+                    MainTabView(
+                        onCreate: { path.append(.create) },
+                        onReview: { path.append(.study) }
+                    )
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationDestination(for: Route.self) { route in
+                        destination(route)
+                            .toolbar(.hidden, for: .navigationBar)
+                    }
                 }
+                .tint(Theme.primary)
             }
-            .tint(Theme.primary)
+        }
+        // Keep the live decks listener in sync with the signed-in user.
+        .task(id: auth.currentUser?.id) {
+            deckStore.bind(uid: auth.currentUser?.id)
         }
     }
 
@@ -39,9 +49,13 @@ struct ContentView: View {
     private func destination(_ route: Route) -> some View {
         switch route {
         case .create:
-            CreateView(onBack: pop, onNext: { path.append(.preview) })
-        case .preview:
-            PreviewView(onBack: pop, onSave: { path.append(.study) })
+            CreateView(onBack: pop, onGenerated: { d in path.append(.preview(d)) })
+        case .preview(let draft):
+            PreviewView(draft: draft, onBack: pop) { title, cards in
+                if await deckStore.createDeck(title: title, sourceType: draft.sourceType, drafts: cards) {
+                    path.removeAll()   // back home; live listener shows the new deck
+                }
+            }
         case .study:
             StudyView(onClose: { path.removeAll() }, onAnswer: { path.append(.result) })
         case .result:
@@ -55,4 +69,5 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environment(AuthService.preview)
+        .environment(DeckStore.preview)
 }

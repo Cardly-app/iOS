@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct HomeView: View {
+    @Environment(DeckStore.self) private var deckStore
     var onCreate: () -> Void = {}
     var onReview: () -> Void = {}
 
@@ -41,10 +42,14 @@ struct HomeView: View {
                     .padding(.horizontal, 2)
                     .padding(.top, 28).padding(.bottom, 14)
 
-                    VStack(spacing: 12) {
-                        ForEach(SampleData.decks) { DeckRow(d: $0) }
+                    if deckStore.decks.isEmpty {
+                        EmptyDecks(onCreate: onCreate).padding(.top, 30).padding(.bottom, 120)
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(deckStore.decks) { DeckRow(d: $0) }
+                        }
+                        .padding(.bottom, 120)
                     }
-                    .padding(.bottom, 120)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 4)
@@ -61,7 +66,7 @@ struct HomeView: View {
                         .font(.pretendard(13.5, weight: .bold)).kerning(-0.2)
                         .foregroundStyle(.white.opacity(0.9))
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text("12").font(.pretendard(56, weight: .heavy)).kerning(-2)
+                        Text("\(deckStore.dueCount)").font(.pretendard(56, weight: .heavy)).kerning(-2)
                         Text("장").font(.pretendard(26, weight: .bold))
                     }
                     .foregroundStyle(.white)
@@ -97,20 +102,47 @@ struct DeckRow: View {
             .frame(width: 46, height: 46)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(d.name).font(.pretendard(16, weight: .bold)).kerning(-0.3)
+                Text(d.title).font(.pretendard(16, weight: .bold)).kerning(-0.3)
                     .lineLimit(1)
-                Text(d.meta).font(.pretendard(13, weight: .medium)).foregroundStyle(Theme.ink2)
-                ProgressTrack(pct: d.pct).padding(.top, 6)
+                Text("카드 \(d.cardCount)장")
+                    .font(.pretendard(13, weight: .medium)).foregroundStyle(Theme.ink2)
             }
 
-            Text("\(Int(d.pct))%")
-                .font(.pretendard(16, weight: .heavy)).kerning(-0.5)
-                .foregroundStyle(Theme.primary)
-                .monospacedDigit()
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.ink3)
         }
         .padding(.horizontal, 18).padding(.vertical, 16)
         .cardStyle()
     }
 }
 
-#Preview { HomeView() }
+/// Shown on Home / Cards when the user has no decks yet.
+struct EmptyDecks: View {
+    var onCreate: () -> Void = {}
+    var body: some View {
+        VStack(spacing: 16) {
+            CardsMotif(size: 96, tone: "tint")
+            VStack(spacing: 6) {
+                Text("첫 덱을 만들어보세요")
+                    .font(.pretendard(19, weight: .bold)).kerning(-0.4)
+                Text("강의자료나 주제를 입력하면\nAI가 플래시카드로 만들어드려요.")
+                    .multilineTextAlignment(.center)
+                    .font(.pretendard(14, weight: .medium)).foregroundStyle(Theme.ink2)
+                    .lineSpacing(3)
+            }
+            Button(action: onCreate) {
+                Pill(text: "새 덱 만들기", systemImage: "plus", fill: Theme.primary, fg: .white)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+    }
+}
+
+#Preview {
+    HomeView()
+        .environment(DeckStore.preview)
+}

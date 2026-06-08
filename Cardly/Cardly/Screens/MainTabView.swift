@@ -30,6 +30,7 @@ struct MainTabView: View {
 // MARK: - Cards tab (all decks)
 
 private struct CardsTab: View {
+    @Environment(DeckStore.self) private var deckStore
     var onCreate: () -> Void
     var body: some View {
         ZStack {
@@ -45,10 +46,14 @@ private struct CardsTab: View {
                     }
                     .padding(.bottom, 18)
 
-                    VStack(spacing: 12) {
-                        ForEach(SampleData.decks) { DeckRow(d: $0) }
+                    if deckStore.decks.isEmpty {
+                        EmptyDecks(onCreate: onCreate).padding(.top, 40)
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(deckStore.decks) { DeckRow(d: $0) }
+                        }
+                        .padding(.bottom, 120)
                     }
-                    .padding(.bottom, 120)
                 }
                 .padding(.horizontal, 20).padding(.top, 4)
             }
@@ -187,4 +192,5 @@ private struct ProfileTab: View {
 #Preview {
     MainTabView()
         .environment(AuthService.preview)
+        .environment(DeckStore.preview)
 }

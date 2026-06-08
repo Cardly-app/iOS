@@ -64,7 +64,7 @@ enum Theme {
 }
 
 // Named palette tone used by deck rows / create options
-enum Tone: String {
+enum Tone: String, CaseIterable {
     case lav, sky, lime, peach, pink
     var fill: Color {
         switch self {

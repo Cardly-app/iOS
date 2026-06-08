@@ -2,24 +2,66 @@
 //  Models.swift
 //  Cardly
 //
-//  Sample data backing the static design.
+//  Firestore-backed Codable models. Dates use `Date` (the SDK maps them to
+//  Firestore Timestamp automatically). `@DocumentID` is filled in on read and
+//  left nil on create (Firestore assigns the id).
+//
+//  NOTE: `Flashcard`, `CreateOption`, and `SampleData` (previewCards/wrongCards)
+//  still back the not-yet-converted Preview/Study/Result screens. They'll be
+//  removed once those screens read real data (week 4 of the plan).
 //
 
 import Foundation
+import FirebaseFirestore
 
-struct Deck: Identifiable {
-    let id = UUID()
-    let name: String
-    let meta: String
-    let pct: Double
-    let tone: Tone
+// MARK: - Firestore models
+
+/// users/{uid}/decks/{deckId}
+struct Deck: Codable, Identifiable, Equatable {
+    @DocumentID var id: String?
+    var title: String
+    var description: String = ""
+    var sourceType: SourceType = .prompt
+    var createdAt: Date = Date()
+    var cardCount: Int = 0
+
+    /// UI-only color tone, derived deterministically from the id (not persisted).
+    /// Uses a stable scalar sum — Swift's `hashValue` is randomized per launch.
+    var tone: Tone {
+        let key = id ?? title
+        let sum = key.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return Tone.allCases[sum % Tone.allCases.count]
+    }
 }
 
-struct Flashcard: Identifiable {
-    let id = UUID()
-    let q: String
-    let a: String
+/// users/{uid}/decks/{deckId}/cards/{cardId}
+struct Card: Codable, Identifiable, Equatable {
+    @DocumentID var id: String?
+    var front: String
+    var back: String
+    var hint: String? = nil
+    var createdAt: Date = Date()
+    var lastReviewedAt: Date? = nil
+    var nextReviewAt: Date = Date()
+    var correctCount: Int = 0
+    var wrongCount: Int = 0
+    var lastResult: CardResult? = nil
+    var streak: Int = 0
 }
+
+enum CardResult: String, Codable { case correct, wrong }
+
+/// users/{uid}/sessions/{sessionId}
+struct StudySessionRecord: Codable, Identifiable {
+    @DocumentID var id: String?
+    var deckId: String
+    var startedAt: Date
+    var endedAt: Date
+    var totalCards: Int
+    var correctCards: Int
+}
+
+// MARK: - UI-only metadata (kept)
 
 struct CreateOption: Identifiable {
     let id = UUID()
@@ -30,13 +72,23 @@ struct CreateOption: Identifiable {
     var ai: Bool = false
 }
 
-enum SampleData {
-    static let decks: [Deck] = [
-        .init(name: "iOS 프로그래밍 기말", meta: "카드 45장 · 어제 학습", pct: 78, tone: .lav),
-        .init(name: "웹프레임워크2 퀴즈", meta: "카드 32장 · 3일 전 학습", pct: 65, tone: .sky),
-        .init(name: "운영체제 중간고사", meta: "카드 28장 · 1주일 전 학습", pct: 82, tone: .lime),
-    ]
+/// Pre-save result of generation, carried Create → Preview → save.
+/// Hashable so it can ride inside the navigation Route (avoids a state race).
+struct DraftDeck: Hashable {
+    var title: String
+    var sourceType: SourceType
+    var drafts: [CardDraft]
+}
 
+// MARK: - Temporary sample data (Preview/Study/Result screens — removed in week 4)
+
+struct Flashcard: Identifiable {
+    let id = UUID()
+    let q: String
+    let a: String
+}
+
+enum SampleData {
     static let createOptions: [CreateOption] = [
         .init(symbol: "text.alignleft", title: "텍스트 붙여넣기", subtitle: "강의노트나 정리 자료를 직접 입력", tone: .lav),
         .init(symbol: "doc", title: "PDF 업로드", subtitle: "강의 슬라이드나 교재 PDF를 업로드", tone: .sky),

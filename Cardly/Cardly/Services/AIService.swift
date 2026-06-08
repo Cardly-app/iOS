@@ -28,7 +28,7 @@ struct AIInput {
 
 /// A pre-save draft card. NOT a Firestore model — the Preview screen edits these,
 /// then DeckRepository maps them to persisted `Card` documents on save.
-struct CardDraft: Identifiable, Equatable {
+struct CardDraft: Identifiable, Hashable {
     let id = UUID()
     var front: String
     var back: String
