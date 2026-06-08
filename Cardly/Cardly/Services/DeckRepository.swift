@@ -108,6 +108,16 @@ struct DeckRepository {
         ])
     }
 
+    /// Delete a deck and all of its cards. Firestore doesn't cascade, so we
+    /// remove the cards subcollection in a batch, then the deck document.
+    func deleteDeck(uid: String, deckId: String) async throws {
+        let cardSnap = try await cardsRef(uid, deckId).getDocuments()
+        let batch = db.batch()
+        for doc in cardSnap.documents { batch.deleteDocument(doc.reference) }
+        batch.deleteDocument(decksRef(uid).document(deckId))
+        try await batch.commit()
+    }
+
     /// Append a finished-session summary document.
     func writeSession(uid: String, deckId: String, startedAt: Date, endedAt: Date,
                       totalCards: Int, correctCards: Int) async throws {

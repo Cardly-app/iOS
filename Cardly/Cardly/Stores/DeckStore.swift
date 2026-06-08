@@ -59,6 +59,18 @@ final class DeckStore {
         dueCount = await loadDueCards().count
     }
 
+    /// Delete a deck (and its cards). The decks listener updates the list;
+    /// we also refresh the due count since the deck's cards are gone.
+    func deleteDeck(_ deck: Deck) async {
+        guard let uid = boundUid, let deckId = deck.id else { return }
+        do {
+            try await repo.deleteDeck(uid: uid, deckId: deckId)
+            await refreshDueCount()
+        } catch {
+            print("deleteDeck failed:", error)
+        }
+    }
+
     /// Create a deck for the currently-bound user. Returns true on success.
     /// Lives here (a stable @MainActor class) rather than in a View struct so
     /// the async Firestore call doesn't capture a transient struct context.

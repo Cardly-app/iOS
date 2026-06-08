@@ -91,6 +91,9 @@ struct HomeView: View {
 
 struct DeckRow: View {
     let d: Deck
+    @Environment(DeckStore.self) private var deckStore
+    @State private var confirmDelete = false
+
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
@@ -114,6 +117,17 @@ struct DeckRow: View {
         }
         .padding(.horizontal, 18).padding(.vertical, 16)
         .cardStyle()
+        .contextMenu {
+            Button(role: .destructive) { confirmDelete = true } label: {
+                Label("덱 삭제", systemImage: "trash")
+            }
+        }
+        .confirmationDialog("이 덱을 삭제할까요?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("삭제", role: .destructive) { Task { await deckStore.deleteDeck(d) } }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("‘\(d.title)’과(와) 카드 \(d.cardCount)장이 영구 삭제됩니다.")
+        }
     }
 }
 
