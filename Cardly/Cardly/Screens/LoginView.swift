@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct LoginView: View {
-    var onContinue: () -> Void = {}
+    @State private var showEmailAuth = false
 
     var body: some View {
         ZStack {
@@ -59,8 +59,9 @@ struct LoginView: View {
                     }
                     .padding(.bottom, 18)
 
-                    PillButton(title: "Apple로 계속하기", systemImage: "apple.logo", style: .dark, action: onContinue)
-                    PillButton(title: "이메일로 시작하기", systemImage: "envelope", style: .outline, action: onContinue)
+                    // Apple Sign-in deferred (needs a paid Apple Developer account).
+                    PillButton(title: "이메일로 시작하기", systemImage: "envelope",
+                               style: .primary) { showEmailAuth = true }
 
                     (Text("계속하면 ") + Text("이용약관").underline()
                         + Text("과 ") + Text("개인정보처리방침").underline()
@@ -75,7 +76,14 @@ struct LoginView: View {
                 .padding(.bottom, 16)
             }
         }
+        .sheet(isPresented: $showEmailAuth) {
+            EmailAuthView()
+                .presentationDragIndicator(.visible)
+        }
     }
 }
 
-#Preview { LoginView() }
+#Preview {
+    LoginView()
+        .environment(AuthService.preview)
+}

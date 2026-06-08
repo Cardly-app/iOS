@@ -123,6 +123,13 @@ private struct ChartTab: View {
 // MARK: - Profile tab (placeholder)
 
 private struct ProfileTab: View {
+    @Environment(AuthService.self) private var auth
+
+    private var initial: String {
+        let name = auth.currentUser?.displayName ?? ""
+        return String(name.first.map(String.init) ?? "C").uppercased()
+    }
+
     var body: some View {
         ZStack {
             Theme.bgSoft.ignoresSafeArea()
@@ -133,12 +140,13 @@ private struct ProfileTab: View {
                         .padding(.bottom, 22)
 
                     VStack(spacing: 14) {
-                        Text("K").font(.pretendard(34, weight: .heavy))
+                        Text(initial).font(.pretendard(34, weight: .heavy))
                             .foregroundStyle(.white)
                             .frame(width: 84, height: 84)
                             .background(Theme.primary, in: Circle())
-                        Text("Yun Hyeseong").font(.pretendard(20, weight: .bold)).kerning(-0.4)
-                        Text("tell280@hansung.ac.kr")
+                        Text(auth.currentUser?.displayName ?? "사용자")
+                            .font(.pretendard(20, weight: .bold)).kerning(-0.4)
+                        Text(auth.currentUser?.email ?? "")
                             .font(.pretendard(14, weight: .medium)).foregroundStyle(Theme.ink2)
                     }
                     .frame(maxWidth: .infinity)
@@ -153,7 +161,10 @@ private struct ProfileTab: View {
                         row("questionmark.circle", "도움말")
                     }
                     .cardStyle()
-                    .padding(.top, 14).padding(.bottom, 120)
+                    .padding(.top, 14)
+
+                    PillButton(title: "로그아웃", style: .outline) { auth.signOut() }
+                        .padding(.top, 14).padding(.bottom, 120)
                 }
                 .padding(.horizontal, 20).padding(.top, 4)
             }
@@ -173,4 +184,7 @@ private struct ProfileTab: View {
     }
 }
 
-#Preview { MainTabView() }
+#Preview {
+    MainTabView()
+        .environment(AuthService.preview)
+}

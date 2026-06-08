@@ -13,11 +13,13 @@ enum Route: Hashable {
 }
 
 struct ContentView: View {
-    @State private var loggedIn = false
+    @Environment(AuthService.self) private var auth
     @State private var path: [Route] = []
 
     var body: some View {
-        if loggedIn {
+        if auth.currentUser == nil {
+            LoginView()
+        } else {
             NavigationStack(path: $path) {
                 MainTabView(
                     onCreate: { path.append(.create) },
@@ -30,8 +32,6 @@ struct ContentView: View {
                 }
             }
             .tint(Theme.primary)
-        } else {
-            LoginView(onContinue: { loggedIn = true })
         }
     }
 
@@ -54,4 +54,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environment(AuthService.preview)
 }

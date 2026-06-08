@@ -151,3 +151,6 @@ iOSInjectionProject/
 **/xcshareddata/WorkspaceSettings.xcsettings
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,xcode,swift,visualstudiocode
+
+# Firebase config (contains project keys — keep local; re-download per machine)
+GoogleService-Info.plist
