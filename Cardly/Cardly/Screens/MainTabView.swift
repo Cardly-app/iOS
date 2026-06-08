@@ -64,6 +64,13 @@ private struct CardsTab: View {
 // MARK: - Chart tab (stats placeholder)
 
 private struct ChartTab: View {
+    @Environment(DeckStore.self) private var deckStore
+    @State private var stats = Stats(totalCards: 0, avgAccuracy: 0, streakDays: 0,
+                                     weekdayCards: Array(repeating: 0, count: 7))
+
+    private let labels = ["월", "화", "수", "목", "금", "토", "일"]
+    private var maxCards: Int { max(stats.weekdayCards.max() ?? 0, 1) }
+
     var body: some View {
         ZStack {
             Theme.bgSoft.ignoresSafeArea()
@@ -79,19 +86,22 @@ private struct ChartTab: View {
                                 Text("이번 주 학습").font(.pretendard(13.5, weight: .bold))
                                     .foregroundStyle(Theme.ink2)
                                 HStack(spacing: 6) {
-                                    Text("5일 연속").font(.pretendard(22, weight: .heavy)).kerning(-0.6)
-                                    Image(systemName: "flame.fill").font(.system(size: 19))
-                                        .foregroundStyle(Theme.coral)
+                                    Text("\(stats.streakDays)일 연속").font(.pretendard(22, weight: .heavy)).kerning(-0.6)
+                                    if stats.streakDays > 0 {
+                                        Image(systemName: "flame.fill").font(.system(size: 19))
+                                            .foregroundStyle(Theme.coral)
+                                    }
                                 }
                             }
                             Spacer()
                         }
                         HStack(spacing: 8) {
-                            ForEach(Array(["월","화","수","목","금","토","일"].enumerated()), id: \.offset) { i, d in
+                            ForEach(Array(labels.enumerated()), id: \.offset) { i, d in
+                                let count = stats.weekdayCards[i]
                                 VStack(spacing: 8) {
                                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                        .fill(i < 5 ? Theme.primary : Theme.line)
-                                        .frame(height: [40, 64, 30, 80, 52, 12, 12][i])
+                                        .fill(count > 0 ? Theme.primary : Theme.line)
+                                        .frame(height: max(12, CGFloat(count) / CGFloat(maxCards) * 80))
                                     Text(d).font(.pretendard(11, weight: .semibold)).foregroundStyle(Theme.ink3)
                                 }
                                 .frame(maxWidth: .infinity)
@@ -104,14 +114,15 @@ private struct ChartTab: View {
                     .cardStyle()
 
                     HStack(spacing: 12) {
-                        miniStat("총 카드", "105", Theme.lav, Theme.lavInk)
-                        miniStat("평균 정답률", "84%", Theme.lime, Theme.limeInk)
+                        miniStat("총 카드", "\(stats.totalCards)", Theme.lav, Theme.lavInk)
+                        miniStat("평균 정답률", "\(stats.avgAccuracy)%", Theme.lime, Theme.limeInk)
                     }
                     .padding(.top, 12).padding(.bottom, 120)
                 }
                 .padding(.horizontal, 20).padding(.top, 4)
             }
         }
+        .task { stats = await deckStore.loadStats() }
     }
 
     private func miniStat(_ l: String, _ v: String, _ fill: Color, _ ink: Color) -> some View {

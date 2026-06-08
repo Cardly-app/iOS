@@ -17,7 +17,7 @@ import FirebaseFirestore
 // MARK: - Firestore models
 
 /// users/{uid}/decks/{deckId}
-struct Deck: Codable, Identifiable, Equatable {
+struct Deck: Codable, Identifiable, Hashable {
     @DocumentID var id: String?
     var title: String
     var description: String = ""
@@ -89,6 +89,14 @@ struct DraftDeck: Hashable {
     var title: String
     var sourceType: SourceType
     var drafts: [CardDraft]
+}
+
+/// Aggregate study stats for the chart tab.
+struct Stats {
+    var totalCards: Int
+    var avgAccuracy: Int            // percent
+    var streakDays: Int
+    var weekdayCards: [Int]         // Mon…Sun, cards studied
 }
 
 // MARK: - UI-only metadata for the create screen

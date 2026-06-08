@@ -10,6 +10,7 @@ import SwiftUI
 
 enum Route: Hashable {
     case create
+    case deckDetail(Deck)
     case preview(DraftDeck)
     case study([Card])
     case result(StudySummary)
@@ -50,6 +51,10 @@ struct ContentView: View {
         switch route {
         case .create:
             CreateView(onBack: pop, onGenerated: { d in path.append(.preview(d)) })
+        case .deckDetail(let deck):
+            DeckDetailView(deck: deck, onBack: pop, onStudy: { cards in
+                if !cards.isEmpty { path.append(.study(cards)) }
+            })
         case .preview(let draft):
             PreviewView(draft: draft, onBack: pop) { title, cards in
                 if await deckStore.createDeck(title: title, sourceType: draft.sourceType, drafts: cards) {

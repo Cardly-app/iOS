@@ -46,6 +46,12 @@ final class DeckStore {
         }
     }
 
+    /// All cards in one deck (for the detail screen / single-deck study).
+    func cards(in deck: Deck) async -> [Card] {
+        guard let uid = boundUid, let deckId = deck.id else { return [] }
+        return (try? await repo.cards(uid: uid, deckId: deckId)) ?? []
+    }
+
     /// Cards due for review right now, across all of the user's decks.
     func loadDueCards() async -> [Card] {
         guard let uid = boundUid else { return [] }
@@ -57,6 +63,45 @@ final class DeckStore {
     /// (card scheduling changes don't trigger the decks listener).
     func refreshDueCount() async {
         dueCount = await loadDueCards().count
+    }
+
+    /// Aggregate stats for the chart tab, computed from decks + sessions.
+    func loadStats() async -> Stats {
+        let totalCards = decks.reduce(0) { $0 + $1.cardCount }
+        guard let uid = boundUid,
+              let sessions = try? await repo.sessions(uid: uid) else {
+            return Stats(totalCards: totalCards, avgAccuracy: 0, streakDays: 0, weekdayCards: Array(repeating: 0, count: 7))
+        }
+
+        // Average accuracy across all sessions.
+        let answered = sessions.reduce(0) { $0 + $1.totalCards }
+        let correct = sessions.reduce(0) { $0 + $1.correctCards }
+        let avg = answered == 0 ? 0 : Int((Double(correct) / Double(answered) * 100).rounded())
+
+        let cal = Calendar.current
+        // Consecutive-day streak ending today (or yesterday).
+        let studiedDays = Set(sessions.map { cal.startOfDay(for: $0.startedAt) })
+        var streak = 0
+        var day = cal.startOfDay(for: Date())
+        if !studiedDays.contains(day), let y = cal.date(byAdding: .day, value: -1, to: day) { day = y }
+        while studiedDays.contains(day) {
+            streak += 1
+            guard let prev = cal.date(byAdding: .day, value: -1, to: day) else { break }
+            day = prev
+        }
+
+        // Cards studied per weekday of the current week (Mon…Sun).
+        var weekday = Array(repeating: 0, count: 7)
+        if let week = cal.dateInterval(of: .weekOfYear, for: Date()) {
+            for s in sessions where week.contains(s.startedAt) {
+                // Calendar weekday: 1=Sun…7=Sat → map to Mon=0…Sun=6
+                let wd = cal.component(.weekday, from: s.startedAt)
+                let idx = (wd + 5) % 7
+                weekday[idx] += s.totalCards
+            }
+        }
+
+        return Stats(totalCards: totalCards, avgAccuracy: avg, streakDays: streak, weekdayCards: weekday)
     }
 
     /// Delete a deck (and its cards). The decks listener updates the list;

@@ -95,28 +95,31 @@ struct DeckRow: View {
     @State private var confirmDelete = false
 
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(d.tone.fill)
-                Image(systemName: "rectangle.on.rectangle")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(d.tone.ink)
-            }
-            .frame(width: 46, height: 46)
+        NavigationLink(value: Route.deckDetail(d)) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous).fill(d.tone.fill)
+                    Image(systemName: "rectangle.on.rectangle")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(d.tone.ink)
+                }
+                .frame(width: 46, height: 46)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(d.title).font(.pretendard(16, weight: .bold)).kerning(-0.3)
-                    .lineLimit(1)
-                Text("카드 \(d.cardCount)장")
-                    .font(.pretendard(13, weight: .medium)).foregroundStyle(Theme.ink2)
-            }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(d.title).font(.pretendard(16, weight: .bold)).kerning(-0.3)
+                        .lineLimit(1)
+                    Text("카드 \(d.cardCount)장")
+                        .font(.pretendard(13, weight: .medium)).foregroundStyle(Theme.ink2)
+                }
 
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.ink3)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.ink3)
+            }
+            .padding(.horizontal, 18).padding(.vertical, 16)
+            .cardStyle()
         }
-        .padding(.horizontal, 18).padding(.vertical, 16)
-        .cardStyle()
+        .buttonStyle(.plain)
         .contextMenu {
             Button(role: .destructive) { confirmDelete = true } label: {
                 Label("덱 삭제", systemImage: "trash")

@@ -118,6 +118,14 @@ struct DeckRepository {
         try await batch.commit()
     }
 
+    /// All finished sessions, newest first (for the stats tab).
+    func sessions(uid: String) async throws -> [StudySessionRecord] {
+        let snap = try await db.collection("users").document(uid).collection("sessions")
+            .order(by: "startedAt", descending: true)
+            .getDocuments()
+        return snap.documents.compactMap { try? $0.data(as: StudySessionRecord.self) }
+    }
+
     /// Append a finished-session summary document.
     func writeSession(uid: String, deckId: String, startedAt: Date, endedAt: Date,
                       totalCards: Int, correctCards: Int) async throws {
