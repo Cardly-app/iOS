@@ -11,8 +11,8 @@ import SwiftUI
 enum Route: Hashable {
     case create
     case preview(DraftDeck)
-    case study
-    case result
+    case study([Card])
+    case result(StudySummary)
 }
 
 struct ContentView: View {
@@ -28,7 +28,7 @@ struct ContentView: View {
                 NavigationStack(path: $path) {
                     MainTabView(
                         onCreate: { path.append(.create) },
-                        onReview: { path.append(.study) }
+                        onReview: startReview
                     )
                     .toolbar(.hidden, for: .navigationBar)
                     .navigationDestination(for: Route.self) { route in
@@ -56,10 +56,25 @@ struct ContentView: View {
                     path.removeAll()   // back home; live listener shows the new deck
                 }
             }
-        case .study:
-            StudyView(onClose: { path.removeAll() }, onAnswer: { path.append(.result) })
-        case .result:
-            ResultView(onRetryWrong: { path.append(.study) }, onHome: { path.removeAll() })
+        case .study(let cards):
+            StudyView(cards: cards, uid: auth.currentUser?.id ?? "",
+                      onClose: { path.removeAll() },
+                      onFinish: { summary in
+                          path.append(.result(summary))
+                          Task { await deckStore.refreshDueCount() }
+                      })
+        case .result(let summary):
+            ResultView(summary: summary,
+                       onRetryWrong: { wrong in path.append(.study(wrong)) },
+                       onHome: { path.removeAll() })
+        }
+    }
+
+    /// Load today's due cards and start a study session (no-op if none due).
+    private func startReview() {
+        Task {
+            let due = await deckStore.loadDueCards()
+            if !due.isEmpty { path.append(.study(due)) }
         }
     }
 

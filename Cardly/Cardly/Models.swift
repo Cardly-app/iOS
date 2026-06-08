@@ -35,8 +35,9 @@ struct Deck: Codable, Identifiable, Equatable {
 }
 
 /// users/{uid}/decks/{deckId}/cards/{cardId}
-struct Card: Codable, Identifiable, Equatable {
+struct Card: Codable, Identifiable, Hashable {
     @DocumentID var id: String?
+    var deckId: String? = nil      // denormalized so a loaded card can be updated
     var front: String
     var back: String
     var hint: String? = nil
@@ -49,7 +50,17 @@ struct Card: Codable, Identifiable, Equatable {
     var streak: Int = 0
 }
 
-enum CardResult: String, Codable { case correct, wrong }
+enum CardResult: String, Codable, Hashable { case correct, wrong }
+
+/// Result of one study session, carried Study → Result (Hashable for the Route).
+struct StudySummary: Hashable {
+    var total: Int
+    var correct: Int
+    var elapsedSeconds: Int
+    var wrong: [Card]
+
+    var pct: Int { total == 0 ? 0 : Int((Double(correct) / Double(total) * 100).rounded()) }
+}
 
 /// users/{uid}/sessions/{sessionId}
 struct StudySessionRecord: Codable, Identifiable {
@@ -80,31 +91,12 @@ struct DraftDeck: Hashable {
     var drafts: [CardDraft]
 }
 
-// MARK: - Temporary sample data (Preview/Study/Result screens — removed in week 4)
-
-struct Flashcard: Identifiable {
-    let id = UUID()
-    let q: String
-    let a: String
-}
+// MARK: - UI-only metadata for the create screen
 
 enum SampleData {
     static let createOptions: [CreateOption] = [
         .init(symbol: "text.alignleft", title: "텍스트 붙여넣기", subtitle: "강의노트나 정리 자료를 직접 입력", tone: .lav),
         .init(symbol: "doc", title: "PDF 업로드", subtitle: "강의 슬라이드나 교재 PDF를 업로드", tone: .sky),
         .init(symbol: "sparkles", title: "주제로 시작", subtitle: "주제만 입력하면 AI가 카드를 생성", tone: .lime, ai: true),
-    ]
-
-    static let previewCards: [Flashcard] = [
-        .init(q: "SwiftUI에서 @State와 @Binding의 차이는?", a: "@State는 뷰 자체의 상태를, @Binding은 부모…"),
-        .init(q: "ARC가 메모리를 관리하는 원리는?", a: "참조 카운트가 0이 되면 자동으로 해제…"),
-        .init(q: "Optional의 unwrapping 방법 3가지는?", a: "if let, guard let, force unwrap (!)"),
-        .init(q: "Swift의 클래스와 구조체의 핵심 차이는?", a: "클래스는 참조 타입, 구조체는 값 타입…"),
-    ]
-
-    static let wrongCards: [String] = [
-        "Optional Chaining의 동작 방식은?",
-        "GCD의 main / global queue 차이?",
-        "weak와 unowned 참조의 차이는?",
     ]
 }

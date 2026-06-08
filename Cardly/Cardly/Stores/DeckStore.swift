@@ -38,10 +38,25 @@ final class DeckStore {
         isLoading = true
         listener = repo.decksListener(uid: uid) { [weak self] decks in
             Task { @MainActor in
-                self?.decks = decks
-                self?.isLoading = false
+                guard let self else { return }
+                self.decks = decks
+                self.isLoading = false
+                await self.refreshDueCount()
             }
         }
+    }
+
+    /// Cards due for review right now, across all of the user's decks.
+    func loadDueCards() async -> [Card] {
+        guard let uid = boundUid else { return [] }
+        let ids = decks.compactMap { $0.id }
+        return (try? await repo.dueCards(uid: uid, deckIds: ids)) ?? []
+    }
+
+    /// Recompute the "오늘의 복습" badge count. Call after a study session
+    /// (card scheduling changes don't trigger the decks listener).
+    func refreshDueCount() async {
+        dueCount = await loadDueCards().count
     }
 
     /// Create a deck for the currently-bound user. Returns true on success.

@@ -1,14 +1,20 @@
 //
 //  ResultView.swift
-//  Cardly — Screen 6: Result
+//  Cardly — Screen 6: Result (real session summary)
 //
 
 import SwiftUI
 
 struct ResultView: View {
-    var onRetryWrong: () -> Void = {}
+    let summary: StudySummary
+    var onRetryWrong: ([Card]) -> Void = { _ in }
     var onHome: () -> Void = {}
     @State private var reminderOn = true
+
+    private var elapsedText: String {
+        let m = summary.elapsedSeconds / 60, s = summary.elapsedSeconds % 60
+        return m > 0 ? "\(m)분" : "\(s)초"
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -20,10 +26,10 @@ struct ResultView: View {
 
                     // donut
                     ZStack {
-                        Donut(pct: 85, size: 172)
+                        Donut(pct: Double(summary.pct), size: 172)
                         VStack(spacing: 2) {
-                            Text("85%").font(.pretendard(44, weight: .heavy)).kerning(-2).monospacedDigit()
-                            Text("17 / 20 정답")
+                            Text("\(summary.pct)%").font(.pretendard(44, weight: .heavy)).kerning(-2).monospacedDigit()
+                            Text("\(summary.correct) / \(summary.total) 정답")
                                 .font(.pretendard(13.5, weight: .semibold)).foregroundStyle(Theme.ink2)
                                 .monospacedDigit()
                         }
@@ -32,18 +38,18 @@ struct ResultView: View {
 
                     // stats
                     HStack(spacing: 0) {
-                        stat("학습 카드", "20")
+                        stat("학습 카드", "\(summary.total)")
                         divider
-                        stat("정답", "17")
+                        stat("정답", "\(summary.correct)")
                         divider
-                        stat("소요 시간", "8분")
+                        stat("소요 시간", elapsedText)
                     }
                     .padding(.vertical, 16)
                     .frame(maxWidth: .infinity)
                     .cardStyle(soft: true)
                     .padding(.top, 20)
 
-                    // next review
+                    // next review (reminder toggle is cosmetic for now)
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("다음 복습 알림")
@@ -61,32 +67,37 @@ struct ResultView: View {
                     .padding(.top, 14)
 
                     // wrong list
-                    HStack {
-                        Text("오답 카드").font(.pretendard(16, weight: .bold)).kerning(-0.3)
-                        Spacer()
-                        Text("3장").font(.pretendard(13, weight: .bold)).foregroundStyle(Theme.coral)
-                    }
-                    .padding(.horizontal, 2).padding(.top, 22).padding(.bottom, 12)
+                    if !summary.wrong.isEmpty {
+                        HStack {
+                            Text("오답 카드").font(.pretendard(16, weight: .bold)).kerning(-0.3)
+                            Spacer()
+                            Text("\(summary.wrong.count)장").font(.pretendard(13, weight: .bold)).foregroundStyle(Theme.coral)
+                        }
+                        .padding(.horizontal, 2).padding(.top, 22).padding(.bottom, 12)
 
-                    VStack(spacing: 9) {
-                        ForEach(SampleData.wrongCards, id: \.self) { w in
-                            HStack(spacing: 11) {
-                                Circle().fill(Theme.coral).frame(width: 8, height: 8)
-                                Text(w).font(.pretendard(14, weight: .semibold)).kerning(-0.2)
-                                Spacer(minLength: 0)
+                        VStack(spacing: 9) {
+                            ForEach(summary.wrong) { card in
+                                HStack(spacing: 11) {
+                                    Circle().fill(Theme.coral).frame(width: 8, height: 8)
+                                    Text(card.front).font(.pretendard(14, weight: .semibold)).kerning(-0.2)
+                                        .lineLimit(2)
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(.horizontal, 16).padding(.vertical, 14)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .cardStyle(soft: true)
                             }
-                            .padding(.horizontal, 16).padding(.vertical, 14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .cardStyle(soft: true)
                         }
                     }
-                    .padding(.bottom, 110)
+                    Color.clear.frame(height: 110)
                 }
                 .padding(.horizontal, 20).padding(.top, 10)
             }
 
             HStack(spacing: 11) {
-                PillButton(title: "오답만 다시", style: .outline, action: onRetryWrong)
+                if !summary.wrong.isEmpty {
+                    PillButton(title: "오답만 다시", style: .outline) { onRetryWrong(summary.wrong) }
+                }
                 PillButton(title: "홈으로", style: .primary, action: onHome)
             }
             .dock(soft: true)
@@ -106,4 +117,9 @@ struct ResultView: View {
     }
 }
 
-#Preview { ResultView() }
+#Preview {
+    ResultView(summary: StudySummary(total: 20, correct: 17, elapsedSeconds: 480, wrong: [
+        Card(deckId: "d", front: "Optional Chaining의 동작 방식은?", back: "…"),
+        Card(deckId: "d", front: "GCD의 main / global queue 차이?", back: "…"),
+    ]))
+}
