@@ -104,6 +104,32 @@ final class DeckStore {
         return Stats(totalCards: totalCards, avgAccuracy: avg, streakDays: streak, weekdayCards: weekday)
     }
 
+    /// Update a card's front/back text. Returns true on success.
+    @discardableResult
+    func updateCard(deckId: String, cardId: String, front: String, back: String) async -> Bool {
+        guard let uid = boundUid else { return false }
+        do {
+            try await repo.updateCard(uid: uid, deckId: deckId, cardId: cardId, front: front, back: back)
+            return true
+        } catch {
+            print("updateCard failed:", error)
+            return false
+        }
+    }
+
+    /// Rename a deck. Returns true on success. The decks listener refreshes the list.
+    @discardableResult
+    func renameDeck(deckId: String, title: String) async -> Bool {
+        guard let uid = boundUid else { return false }
+        do {
+            try await repo.renameDeck(uid: uid, deckId: deckId, title: title)
+            return true
+        } catch {
+            print("renameDeck failed:", error)
+            return false
+        }
+    }
+
     /// Delete a single card from a deck. Returns true on success. The decks
     /// listener picks up the deck's decremented cardCount automatically.
     @discardableResult

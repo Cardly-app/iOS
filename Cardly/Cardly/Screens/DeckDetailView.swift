@@ -14,6 +14,12 @@ struct DeckDetailView: View {
     @State private var cards: [Card] = []
     @State private var loading = true
     @State private var cardToDelete: Card?
+    @State private var cardToEdit: Card?
+    @State private var renamedTitle: String?
+    @State private var showRename = false
+    @State private var renameText = ""
+
+    private var title: String { renamedTitle ?? deck.title }
 
     private var dueCount: Int {
         let now = Date()
@@ -40,12 +46,21 @@ struct DeckDetailView: View {
                                 }
                                 .frame(width: 56, height: 56)
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(deck.title).font(.pretendard(20, weight: .heavy)).kerning(-0.5)
+                                    Text(title).font(.pretendard(20, weight: .heavy)).kerning(-0.5)
                                         .lineLimit(2)
                                     Text("카드 \(loading ? deck.cardCount : cards.count)장")
                                         .font(.pretendard(13.5, weight: .medium)).foregroundStyle(Theme.ink2)
                                 }
                                 Spacer(minLength: 0)
+                                Button {
+                                    renameText = title
+                                    showRename = true
+                                } label: {
+                                    Image(systemName: "pencil").font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(Theme.ink3)
+                                        .frame(width: 32, height: 32)
+                                }
+                                .buttonStyle(.plain)
                             }
 
                             HStack(spacing: 10) {
@@ -66,7 +81,9 @@ struct DeckDetailView: View {
                         } else {
                             VStack(spacing: 12) {
                                 ForEach(cards) { card in
-                                    CardCell(card: card) { cardToDelete = card }
+                                    CardCell(card: card,
+                                             onEdit: { cardToEdit = card },
+                                             onDelete: { cardToDelete = card })
                                 }
                             }
                         }
@@ -94,12 +111,39 @@ struct DeckDetailView: View {
             Button("삭제", role: .destructive) { Task { await delete(card) } }
             Button("취소", role: .cancel) {}
         }
+        .sheet(item: $cardToEdit) { card in
+            CardEditView(card: card) { front, back in
+                await edit(card, front: front, back: back)
+            }
+        }
+        .alert("덱 이름 수정", isPresented: $showRename) {
+            TextField("덱 이름", text: $renameText)
+            Button("저장") { Task { await rename() } }
+            Button("취소", role: .cancel) {}
+        }
     }
 
     private func delete(_ card: Card) async {
         guard let deckId = deck.id, let cardId = card.id else { return }
         if await deckStore.deleteCard(deckId: deckId, cardId: cardId) {
             cards.removeAll { $0.id == card.id }
+        }
+    }
+
+    private func edit(_ card: Card, front: String, back: String) async {
+        guard let deckId = deck.id, let cardId = card.id, !front.isEmpty, !back.isEmpty else { return }
+        if await deckStore.updateCard(deckId: deckId, cardId: cardId, front: front, back: back),
+           let idx = cards.firstIndex(where: { $0.id == card.id }) {
+            cards[idx].front = front
+            cards[idx].back = back
+        }
+    }
+
+    private func rename() async {
+        let t = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty, let deckId = deck.id else { return }
+        if await deckStore.renameDeck(deckId: deckId, title: t) {
+            renamedTitle = t
         }
     }
 
@@ -116,6 +160,7 @@ struct DeckDetailView: View {
 
 private struct CardCell: View {
     let card: Card
+    var onEdit: () -> Void = {}
     var onDelete: () -> Void = {}
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -142,6 +187,8 @@ private struct CardCell: View {
         .padding(.horizontal, 18).padding(.vertical, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardStyle()
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onEdit)
     }
 
     private func badge(_ t: String, fg: Color, bg: Color) -> some View {

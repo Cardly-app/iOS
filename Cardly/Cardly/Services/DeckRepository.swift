@@ -108,6 +108,20 @@ struct DeckRepository {
         ])
     }
 
+    /// Update one card's front/back text.
+    func updateCard(uid: String, deckId: String, cardId: String,
+                    front: String, back: String) async throws {
+        try await cardsRef(uid, deckId).document(cardId).updateData([
+            "front": front,
+            "back": back,
+        ])
+    }
+
+    /// Rename a deck.
+    func renameDeck(uid: String, deckId: String, title: String) async throws {
+        try await decksRef(uid).document(deckId).updateData(["title": title])
+    }
+
     /// Delete a single card and decrement its deck's cardCount.
     func deleteCard(uid: String, deckId: String, cardId: String) async throws {
         let batch = db.batch()
