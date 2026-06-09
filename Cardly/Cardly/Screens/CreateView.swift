@@ -14,9 +14,9 @@ struct CreateView: View {
     @State private var content = ""
     @State private var cardCount: Double = 20   // 10...30
     @State private var generating = false
-    @State private var errorText: String?
+    @State private var phase: GenPhase = .generating   // step shown in the loading overlay
     @State private var pdfFileName: String?
-    @State private var extracting = false
+    @State private var pdfURL: URL?          // picked PDF; extracted lazily on "다음"
     @State private var showImporter = false
     @FocusState private var contentFocused: Bool
 
@@ -75,39 +75,31 @@ struct CreateView: View {
                 }
             }
 
-            VStack(spacing: 8) {
-                if let errorText {
-                    Text(errorText)
-                        .font(.pretendard(13.5, weight: .semibold))
-                        .foregroundStyle(Theme.coral)
-                        .multilineTextAlignment(.center)
-                }
-                PillButton(title: generating ? "AI가 카드 만드는 중…" : "다음",
-                           style: canGenerate ? .primary : .disabled) {
-                    contentFocused = false
-                    Task { await generate() }
-                }
-                .disabled(!canGenerate || generating || extracting)
-                .overlay { if generating { ProgressView().tint(.white) } }
+            PillButton(title: "다음",
+                       style: canGenerate ? .primary : .disabled) {
+                contentFocused = false
+                Task { await generate() }
             }
+            .disabled(!canGenerate || generating)
             .dock(soft: true)
+
+            if generating {
+                GeneratingOverlay(
+                    phase: phase,
+                    isPDF: sourceType == .pdf,
+                    onRetry: { Task { await generate() } },
+                    onBack: { generating = false }
+                )
+                .transition(.opacity)
+                .zIndex(1)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: generating)
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.pdf]) { result in
             guard case .success(let url) = result else { return }
-            Task {
-                extracting = true
-                errorText = nil
-                content = ""
-                pdfFileName = nil
-                defer { extracting = false }
-                let text = await PDFTextExtractor.extract(from: url)
-                if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    errorText = "이 PDF에서 텍스트를 찾지 못했어요. (스캔 품질이 낮거나 빈 문서)"
-                } else {
-                    content = text
-                    pdfFileName = url.lastPathComponent
-                }
-            }
+            content = ""
+            pdfURL = url
+            pdfFileName = url.lastPathComponent
         }
     }
 
@@ -115,53 +107,50 @@ struct CreateView: View {
         withAnimation(.easeOut(duration: 0.15)) { selected = i }
         content = ""
         pdfFileName = nil
-        errorText = nil
+        pdfURL = nil
         contentFocused = false
+        // PDF needs a file, not typed input — open the picker right away.
+        if [SourceType.text, .pdf, .prompt][i] == .pdf { showImporter = true }
     }
 
     @ViewBuilder
     private var inputArea: some View {
         switch sourceType {
         case .pdf:
-            Button { showImporter = true } label: {
-                HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.sky)
-                        if extracting {
-                            ProgressView().tint(Theme.skyInk)
-                        } else {
-                            Image(systemName: pdfFileName == nil ? "doc.badge.plus" : "doc.text.fill")
-                                .font(.system(size: 22)).foregroundStyle(Theme.skyInk)
-                        }
+            if let name = pdfFileName {
+                // Selected file — a compact attachment chip, not an option-style card.
+                HStack(spacing: 10) {
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: 16)).foregroundStyle(Theme.skyInk)
+                    Text(name)
+                        .font(.pretendard(14.5, weight: .semibold)).lineLimit(1)
+                        .foregroundStyle(Theme.ink)
+                    Spacer(minLength: 8)
+                    Button { showImporter = true } label: {
+                        Text("변경").font(.pretendard(13.5, weight: .bold))
+                            .foregroundStyle(Theme.primary)
                     }
-                    .frame(width: 50, height: 50)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        if extracting {
-                            Text("PDF 분석 중…").font(.pretendard(15, weight: .bold))
-                            Text("텍스트 추출/OCR 진행 중").font(.pretendard(13, weight: .medium))
-                                .foregroundStyle(Theme.ink2)
-                        } else if let name = pdfFileName {
-                            Text(name).font(.pretendard(15, weight: .bold)).lineLimit(1)
-                            Text("텍스트 \(content.count)자 추출됨 · 다른 PDF 선택")
-                                .font(.pretendard(13, weight: .medium)).foregroundStyle(Theme.ink2)
-                        } else {
-                            Text("PDF 선택").font(.pretendard(15, weight: .bold))
-                            Text("강의 슬라이드·교재 PDF를 불러와요")
-                                .font(.pretendard(13, weight: .medium)).foregroundStyle(Theme.ink2)
-                        }
-                    }
-                    Spacer(minLength: 0)
-                    if !extracting {
-                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Theme.ink3)
-                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                .cardStyle(soft: true)
+                .padding(.horizontal, 14).padding(.vertical, 12)
+                .background(Theme.sky.opacity(0.35),
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            } else {
+                // No file yet — a slim dashed control (the picker also auto-opens on select).
+                Button { showImporter = true } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "doc.badge.plus").font(.system(size: 16, weight: .semibold))
+                        Text("PDF 파일 선택").font(.pretendard(14.5, weight: .bold))
+                    }
+                    .foregroundStyle(Theme.skyInk)
+                    .frame(maxWidth: .infinity).padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(Theme.sky, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-            .disabled(extracting)
         default:
             VStack(alignment: .leading, spacing: 0) {
                 ZStack(alignment: .topLeading) {
@@ -184,23 +173,37 @@ struct CreateView: View {
     }
 
     private var canGenerate: Bool {
-        !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if sourceType == .pdf { return pdfURL != nil }
+        return !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func generate() async {
         generating = true
-        errorText = nil
-        defer { generating = false }
+
+        // PDF: read text inside the loading screen before generating.
+        if sourceType == .pdf {
+            guard let url = pdfURL else { generating = false; return }
+            phase = .reading
+            let text = await PDFTextExtractor.extract(from: url)
+            if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                phase = .failed("이 PDF에서 텍스트를 찾지 못했어요.\n스캔 품질이 낮거나 빈 문서일 수 있어요.")
+                return
+            }
+            content = text
+        }
+
+        phase = .generating
         let input = AIInput(sourceType: sourceType, content: content)
         do {
             let drafts = try await ai.generateCards(from: input, count: Int(cardCount))
             guard !drafts.isEmpty else {
-                errorText = "카드를 만들지 못했어요. 자료를 더 구체적으로 입력해보세요."
+                phase = .failed("카드를 만들지 못했어요.\n자료를 더 구체적으로 입력해보세요.")
                 return
             }
             onGenerated(DraftDeck(title: defaultTitle, sourceType: sourceType, drafts: drafts))
+            generating = false   // Preview is pushed on top; clear so a back-nav has no stale overlay
         } catch {
-            errorText = "생성에 실패했어요. 네트워크를 확인하고 다시 시도해주세요."
+            phase = .failed("생성에 실패했어요.\n네트워크를 확인하고 다시 시도해주세요.")
         }
     }
 
