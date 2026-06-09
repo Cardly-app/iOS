@@ -9,7 +9,7 @@ struct ResultView: View {
     let summary: StudySummary
     var onRetryWrong: ([Card]) -> Void = { _ in }
     var onHome: () -> Void = {}
-    @State private var reminderOn = true
+    @AppStorage("reviewReminderOn") private var reminderOn = false
 
     private var elapsedText: String {
         let m = summary.elapsedSeconds / 60, s = summary.elapsedSeconds % 60
@@ -49,13 +49,13 @@ struct ResultView: View {
                     .cardStyle(soft: true)
                     .padding(.top, 20)
 
-                    // next review (reminder toggle is cosmetic for now)
+                    // daily review reminder (real local notification)
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("다음 복습 알림")
+                            Text("복습 알림")
                                 .font(.pretendard(12.5, weight: .bold))
                                 .foregroundStyle(Theme.primary.opacity(0.85))
-                            Text("내일 오후 7시")
+                            Text("매일 오후 7시")
                                 .font(.pretendard(16, weight: .bold)).kerning(-0.3)
                                 .foregroundStyle(Theme.primaryInk).lineLimit(1)
                         }
@@ -65,6 +65,9 @@ struct ResultView: View {
                     .padding(.horizontal, 16).padding(.vertical, 14)
                     .background(Theme.lav, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .padding(.top, 14)
+                    .onChange(of: reminderOn) { _, on in
+                        Task { reminderOn = await NotificationService.apply(enabled: on) }
+                    }
 
                     // wrong list
                     if !summary.wrong.isEmpty {

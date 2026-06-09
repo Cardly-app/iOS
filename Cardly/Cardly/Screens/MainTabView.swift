@@ -153,6 +153,7 @@ private struct ChartTab: View {
 
 private struct ProfileTab: View {
     @Environment(AuthService.self) private var auth
+    @AppStorage("reviewReminderOn") private var reminderOn = false
 
     private var initial: String {
         let name = auth.currentUser?.displayName ?? ""
@@ -183,7 +184,18 @@ private struct ProfileTab: View {
                     .cardStyle()
 
                     VStack(spacing: 0) {
-                        row("bell", "복습 알림")
+                        HStack(spacing: 14) {
+                            Image(systemName: "bell").font(.system(size: 18, weight: .medium))
+                                .foregroundStyle(Theme.primary).frame(width: 28)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("복습 알림").font(.pretendard(16, weight: .semibold))
+                                Text("매일 오후 7시").font(.pretendard(12, weight: .medium))
+                                    .foregroundStyle(Theme.ink3)
+                            }
+                            Spacer()
+                            Toggle("", isOn: $reminderOn).labelsHidden().tint(Theme.green)
+                        }
+                        .padding(.horizontal, 18).padding(.vertical, 14)
                         Divider().padding(.leading, 56)
                         row("moon", "다크 모드")
                         Divider().padding(.leading, 56)
@@ -191,6 +203,9 @@ private struct ProfileTab: View {
                     }
                     .cardStyle()
                     .padding(.top, 14)
+                    .onChange(of: reminderOn) { _, on in
+                        Task { reminderOn = await NotificationService.apply(enabled: on) }
+                    }
 
                     PillButton(title: "로그아웃", style: .outline) { auth.signOut() }
                         .padding(.top, 14).padding(.bottom, 120)
