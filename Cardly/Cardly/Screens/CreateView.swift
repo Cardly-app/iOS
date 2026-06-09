@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct CreateView: View {
     var onBack: () -> Void = {}
@@ -14,6 +15,9 @@ struct CreateView: View {
     @State private var cardCount: Double = 20   // 10...30
     @State private var generating = false
     @State private var errorText: String?
+    @State private var pdfFileName: String?
+    @State private var extracting = false
+    @State private var showImporter = false
     @FocusState private var contentFocused: Bool
 
     private let ai: AIService = AppAI.make()
@@ -37,7 +41,7 @@ struct CreateView: View {
 
                         VStack(spacing: 12) {
                             ForEach(Array(SampleData.createOptions.enumerated()), id: \.offset) { i, o in
-                                Button { withAnimation(.easeOut(duration: 0.15)) { selected = i } } label: {
+                                Button { selectSource(i) } label: {
                                     OptionRow(o: o, selected: selected == i)
                                 }
                                 .buttonStyle(.plain)
@@ -83,30 +87,81 @@ struct CreateView: View {
                     contentFocused = false
                     Task { await generate() }
                 }
-                .disabled(!canGenerate || generating)
+                .disabled(!canGenerate || generating || extracting)
                 .overlay { if generating { ProgressView().tint(.white) } }
             }
             .dock(soft: true)
         }
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.pdf]) { result in
+            guard case .success(let url) = result else { return }
+            Task {
+                extracting = true
+                errorText = nil
+                content = ""
+                pdfFileName = nil
+                defer { extracting = false }
+                let text = await PDFTextExtractor.extract(from: url)
+                if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    errorText = "이 PDF에서 텍스트를 찾지 못했어요. (스캔 품질이 낮거나 빈 문서)"
+                } else {
+                    content = text
+                    pdfFileName = url.lastPathComponent
+                }
+            }
+        }
+    }
+
+    private func selectSource(_ i: Int) {
+        withAnimation(.easeOut(duration: 0.15)) { selected = i }
+        content = ""
+        pdfFileName = nil
+        errorText = nil
+        contentFocused = false
     }
 
     @ViewBuilder
     private var inputArea: some View {
         switch sourceType {
         case .pdf:
-            HStack(spacing: 12) {
-                Image(systemName: "doc.badge.plus").font(.system(size: 22))
-                    .foregroundStyle(Theme.skyInk)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("PDF 업로드는 준비 중이에요")
-                        .font(.pretendard(14.5, weight: .bold))
-                    Text("지금은 샘플 카드로 생성됩니다.")
-                        .font(.pretendard(13, weight: .medium)).foregroundStyle(Theme.ink2)
+            Button { showImporter = true } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.sky)
+                        if extracting {
+                            ProgressView().tint(Theme.skyInk)
+                        } else {
+                            Image(systemName: pdfFileName == nil ? "doc.badge.plus" : "doc.text.fill")
+                                .font(.system(size: 22)).foregroundStyle(Theme.skyInk)
+                        }
+                    }
+                    .frame(width: 50, height: 50)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        if extracting {
+                            Text("PDF 분석 중…").font(.pretendard(15, weight: .bold))
+                            Text("텍스트 추출/OCR 진행 중").font(.pretendard(13, weight: .medium))
+                                .foregroundStyle(Theme.ink2)
+                        } else if let name = pdfFileName {
+                            Text(name).font(.pretendard(15, weight: .bold)).lineLimit(1)
+                            Text("텍스트 \(content.count)자 추출됨 · 다른 PDF 선택")
+                                .font(.pretendard(13, weight: .medium)).foregroundStyle(Theme.ink2)
+                        } else {
+                            Text("PDF 선택").font(.pretendard(15, weight: .bold))
+                            Text("강의 슬라이드·교재 PDF를 불러와요")
+                                .font(.pretendard(13, weight: .medium)).foregroundStyle(Theme.ink2)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    if !extracting {
+                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Theme.ink3)
+                    }
                 }
-                Spacer(minLength: 0)
+                .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                .cardStyle(soft: true)
             }
-            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-            .cardStyle(soft: true)
+            .buttonStyle(.plain)
+            .disabled(extracting)
         default:
             VStack(alignment: .leading, spacing: 0) {
                 ZStack(alignment: .topLeading) {
@@ -129,7 +184,7 @@ struct CreateView: View {
     }
 
     private var canGenerate: Bool {
-        sourceType == .pdf || !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func generate() async {
@@ -150,6 +205,10 @@ struct CreateView: View {
     }
 
     private var defaultTitle: String {
+        if sourceType == .pdf, let name = pdfFileName {
+            let base = name.hasSuffix(".pdf") ? String(name.dropLast(4)) : name
+            if !base.isEmpty { return String(base.prefix(30)) }
+        }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         if sourceType == .prompt, !trimmed.isEmpty { return trimmed }
         if let firstLine = trimmed.split(separator: "\n").first, !firstLine.isEmpty {
