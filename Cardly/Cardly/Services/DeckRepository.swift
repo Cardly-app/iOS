@@ -108,6 +108,15 @@ struct DeckRepository {
         ])
     }
 
+    /// Delete a single card and decrement its deck's cardCount.
+    func deleteCard(uid: String, deckId: String, cardId: String) async throws {
+        let batch = db.batch()
+        batch.deleteDocument(cardsRef(uid, deckId).document(cardId))
+        batch.updateData(["cardCount": FieldValue.increment(Int64(-1))],
+                         forDocument: decksRef(uid).document(deckId))
+        try await batch.commit()
+    }
+
     /// Delete a deck and all of its cards. Firestore doesn't cascade, so we
     /// remove the cards subcollection in a batch, then the deck document.
     func deleteDeck(uid: String, deckId: String) async throws {

@@ -13,6 +13,7 @@ struct DeckDetailView: View {
     @Environment(DeckStore.self) private var deckStore
     @State private var cards: [Card] = []
     @State private var loading = true
+    @State private var cardToDelete: Card?
 
     private var dueCount: Int {
         let now = Date()
@@ -41,7 +42,7 @@ struct DeckDetailView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(deck.title).font(.pretendard(20, weight: .heavy)).kerning(-0.5)
                                         .lineLimit(2)
-                                    Text("카드 \(deck.cardCount)장")
+                                    Text("카드 \(loading ? deck.cardCount : cards.count)장")
                                         .font(.pretendard(13.5, weight: .medium)).foregroundStyle(Theme.ink2)
                                 }
                                 Spacer(minLength: 0)
@@ -64,7 +65,9 @@ struct DeckDetailView: View {
                             ProgressView().frame(maxWidth: .infinity).padding(.top, 30)
                         } else {
                             VStack(spacing: 12) {
-                                ForEach(cards) { CardCell(card: $0) }
+                                ForEach(cards) { card in
+                                    CardCell(card: card) { cardToDelete = card }
+                                }
                             }
                         }
                         Color.clear.frame(height: 110)
@@ -84,6 +87,20 @@ struct DeckDetailView: View {
             cards = await deckStore.cards(in: deck)
             loading = false
         }
+        .confirmationDialog("이 카드를 삭제할까요?",
+            isPresented: Binding(get: { cardToDelete != nil },
+                                 set: { if !$0 { cardToDelete = nil } }),
+            presenting: cardToDelete) { card in
+            Button("삭제", role: .destructive) { Task { await delete(card) } }
+            Button("취소", role: .cancel) {}
+        }
+    }
+
+    private func delete(_ card: Card) async {
+        guard let deckId = deck.id, let cardId = card.id else { return }
+        if await deckStore.deleteCard(deckId: deckId, cardId: cardId) {
+            cards.removeAll { $0.id == card.id }
+        }
     }
 
     private func miniStat(_ l: String, _ v: String, _ fill: Color, _ ink: Color) -> some View {
@@ -99,9 +116,10 @@ struct DeckDetailView: View {
 
 private struct CardCell: View {
     let card: Card
+    var onDelete: () -> Void = {}
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            HStack(alignment: .top, spacing: 9) {
+            HStack(alignment: .top, spacing: 10) {
                 badge("Q", fg: Theme.primary, bg: Theme.lav)
                 Text(card.front).font(.pretendard(15, weight: .bold)).kerning(-0.3).lineSpacing(2)
                 Spacer(minLength: 0)
@@ -110,6 +128,11 @@ private struct CardCell: View {
                         .font(.pretendard(11.5, weight: .bold)).monospacedDigit()
                         .foregroundStyle(Theme.ink3)
                 }
+                Button(action: onDelete) {
+                    Image(systemName: "trash").font(.system(size: 14))
+                        .foregroundStyle(Theme.ink3)
+                }
+                .buttonStyle(.plain)
             }
             HStack(alignment: .top, spacing: 9) {
                 badge("A", fg: Theme.ink2, bg: Theme.bgSoft)

@@ -104,6 +104,21 @@ final class DeckStore {
         return Stats(totalCards: totalCards, avgAccuracy: avg, streakDays: streak, weekdayCards: weekday)
     }
 
+    /// Delete a single card from a deck. Returns true on success. The decks
+    /// listener picks up the deck's decremented cardCount automatically.
+    @discardableResult
+    func deleteCard(deckId: String, cardId: String) async -> Bool {
+        guard let uid = boundUid else { return false }
+        do {
+            try await repo.deleteCard(uid: uid, deckId: deckId, cardId: cardId)
+            await refreshDueCount()   // the removed card may have been due
+            return true
+        } catch {
+            print("deleteCard failed:", error)
+            return false
+        }
+    }
+
     /// Delete a deck (and its cards). The decks listener updates the list;
     /// we also refresh the due count since the deck's cards are gone.
     func deleteDeck(_ deck: Deck) async {
