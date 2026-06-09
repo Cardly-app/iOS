@@ -70,6 +70,7 @@ private struct ChartTab: View {
 
     private let labels = ["월", "화", "수", "목", "금", "토", "일"]
     private var maxCards: Int { max(stats.weekdayCards.max() ?? 0, 1) }
+    private var todayIdx: Int { (Calendar.current.component(.weekday, from: Date()) + 5) % 7 }
 
     var body: some View {
         ZStack {
@@ -95,19 +96,31 @@ private struct ChartTab: View {
                             }
                             Spacer()
                         }
-                        HStack(spacing: 8) {
+                        HStack(alignment: .bottom, spacing: 10) {
                             ForEach(Array(labels.enumerated()), id: \.offset) { i, d in
                                 let count = stats.weekdayCards[i]
-                                VStack(spacing: 8) {
-                                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                        .fill(count > 0 ? Theme.primary : Theme.line)
-                                        .frame(height: max(12, CGFloat(count) / CGFloat(maxCards) * 80))
-                                    Text(d).font(.pretendard(11, weight: .semibold)).foregroundStyle(Theme.ink3)
+                                let isToday = i == todayIdx
+                                VStack(spacing: 6) {
+                                    Text(count > 0 ? "\(count)" : " ")
+                                        .font(.pretendard(10.5, weight: .bold)).monospacedDigit()
+                                        .foregroundStyle(isToday ? Theme.primary : Theme.ink3)
+                                        .frame(height: 13)
+                                    // bar on a faint rail (so empty days still read as 0, not gaps)
+                                    ZStack(alignment: .bottom) {
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .fill(Theme.line)
+                                            .frame(height: 84)
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .fill(count > 0 ? Theme.primary : Color.clear)
+                                            .frame(height: count > 0 ? max(14, CGFloat(count) / CGFloat(maxCards) * 84) : 0)
+                                    }
+                                    .frame(maxWidth: 22)
+                                    Text(d).font(.pretendard(11, weight: isToday ? .bold : .semibold))
+                                        .foregroundStyle(isToday ? Theme.primary : Theme.ink3)
                                 }
                                 .frame(maxWidth: .infinity)
                             }
                         }
-                        .frame(height: 100, alignment: .bottom)
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
