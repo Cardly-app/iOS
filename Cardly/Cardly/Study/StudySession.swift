@@ -31,7 +31,7 @@ final class StudySession {
 
     init(cards: [Card], uid: String,
          repo: DeckRepository = DeckRepository(),
-         ai: AIService = MockAIService(),
+         ai: AIService = AppAI.make(),
          startedAt: Date = Date()) {
         self.cards = cards
         self.uid = uid

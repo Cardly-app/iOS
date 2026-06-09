@@ -45,6 +45,12 @@ protocol AIService {
     func explain(front: String, back: String) async throws -> String
 }
 
+/// Single switch point for the whole app. Flip to `MockAIService()` for
+/// offline/dev work without hitting the Cloud Functions backend.
+enum AppAI {
+    static func make() -> AIService { FunctionsAIService() }
+}
+
 // MARK: - Mock implementation
 
 /// Returns canned cards after a delay. Stand-in until a real API is wired.

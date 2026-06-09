@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		B7BD03252FD6D97B00BCF1DB /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B7BD03242FD6D97B00BCF1DB /* FirebaseAuth */; };
 		B7BD03272FD6D98900BCF1DB /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = B7BD03262FD6D98900BCF1DB /* FirebaseFirestore */; };
+		B7BD03372FD78A1200BCF1DB /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = B7BD03362FD78A1200BCF1DB /* FirebaseFunctions */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B7BD03372FD78A1200BCF1DB /* FirebaseFunctions in Frameworks */,
 				B7BD03252FD6D97B00BCF1DB /* FirebaseAuth in Frameworks */,
 				B7BD03272FD6D98900BCF1DB /* FirebaseFirestore in Frameworks */,
 			);
@@ -129,6 +131,7 @@
 			packageProductDependencies = (
 				B7BD03242FD6D97B00BCF1DB /* FirebaseAuth */,
 				B7BD03262FD6D98900BCF1DB /* FirebaseFirestore */,
+				B7BD03362FD78A1200BCF1DB /* FirebaseFunctions */,
 			);
 			productName = Cardly;
 			productReference = B7A663EF2FD1479A00B1E794 /* Cardly.app */;
@@ -620,6 +623,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B7BD03222FD6D7E500BCF1DB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		B7BD03362FD78A1200BCF1DB /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B7BD03222FD6D7E500BCF1DB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

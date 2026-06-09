@@ -13,9 +13,10 @@ struct CreateView: View {
     @State private var content = ""
     @State private var cardCount: Double = 20   // 10...30
     @State private var generating = false
+    @State private var errorText: String?
     @FocusState private var contentFocused: Bool
 
-    private let ai: AIService = MockAIService()
+    private let ai: AIService = AppAI.make()
 
     private var sourceType: SourceType { [SourceType.text, .pdf, .prompt][selected] }
 
@@ -70,13 +71,21 @@ struct CreateView: View {
                 }
             }
 
-            PillButton(title: generating ? "생성 중…" : "다음",
-                       style: canGenerate ? .primary : .disabled) {
-                contentFocused = false
-                Task { await generate() }
+            VStack(spacing: 8) {
+                if let errorText {
+                    Text(errorText)
+                        .font(.pretendard(13.5, weight: .semibold))
+                        .foregroundStyle(Theme.coral)
+                        .multilineTextAlignment(.center)
+                }
+                PillButton(title: generating ? "AI가 카드 만드는 중…" : "다음",
+                           style: canGenerate ? .primary : .disabled) {
+                    contentFocused = false
+                    Task { await generate() }
+                }
+                .disabled(!canGenerate || generating)
+                .overlay { if generating { ProgressView().tint(.white) } }
             }
-            .disabled(!canGenerate || generating)
-            .overlay { if generating { ProgressView().tint(.white) } }
             .dock(soft: true)
         }
     }
@@ -125,11 +134,19 @@ struct CreateView: View {
 
     private func generate() async {
         generating = true
+        errorText = nil
         defer { generating = false }
         let input = AIInput(sourceType: sourceType, content: content)
-        let drafts = (try? await ai.generateCards(from: input, count: Int(cardCount))) ?? []
-        guard !drafts.isEmpty else { return }
-        onGenerated(DraftDeck(title: defaultTitle, sourceType: sourceType, drafts: drafts))
+        do {
+            let drafts = try await ai.generateCards(from: input, count: Int(cardCount))
+            guard !drafts.isEmpty else {
+                errorText = "카드를 만들지 못했어요. 자료를 더 구체적으로 입력해보세요."
+                return
+            }
+            onGenerated(DraftDeck(title: defaultTitle, sourceType: sourceType, drafts: drafts))
+        } catch {
+            errorText = "생성에 실패했어요. 네트워크를 확인하고 다시 시도해주세요."
+        }
     }
 
     private var defaultTitle: String {
