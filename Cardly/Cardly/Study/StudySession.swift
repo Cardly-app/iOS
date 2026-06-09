@@ -17,12 +17,9 @@ final class StudySession {
     private(set) var isRevealed = false
     private(set) var correctCount = 0
     private(set) var wrong: [Card] = []
-    private(set) var explanation: String?
-    private(set) var loadingExplanation = false
 
     private let uid: String
     private let repo: DeckRepository
-    private let ai: AIService
     private let startedAt: Date
 
     /// Spaced-repetition ladder for consecutive correct answers (days).
@@ -31,12 +28,10 @@ final class StudySession {
 
     init(cards: [Card], uid: String,
          repo: DeckRepository = DeckRepository(),
-         ai: AIService = AppAI.make(),
          startedAt: Date = Date()) {
         self.cards = cards
         self.uid = uid
         self.repo = repo
-        self.ai = ai
         self.startedAt = startedAt
     }
 
@@ -68,7 +63,6 @@ final class StudySession {
                                          nextReviewAt: next, streak: streak, result: result)
         }
 
-        explanation = nil
         isRevealed = false
         index += 1
     }
@@ -83,13 +77,5 @@ final class StudySession {
         return StudySummary(total: cards.count, correct: correctCount,
                             elapsedSeconds: Int(ended.timeIntervalSince(startedAt)),
                             wrong: wrong)
-    }
-
-    /// Mock AI explanation for the current card (shown on demand).
-    func explainCurrent() async {
-        guard let card = currentCard, explanation == nil, !loadingExplanation else { return }
-        loadingExplanation = true
-        explanation = try? await ai.explain(front: card.front, back: card.back)
-        loadingExplanation = false
     }
 }

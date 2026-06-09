@@ -40,9 +40,6 @@ struct CardDraft: Identifiable, Hashable {
 protocol AIService {
     /// Generate `count` draft cards from a source. No persistence here.
     func generateCards(from input: AIInput, count: Int) async throws -> [CardDraft]
-
-    /// Per-card "AI 설명 보기" expansion shown during study.
-    func explain(front: String, back: String) async throws -> String
 }
 
 /// Single switch point for the whole app. Flip to `MockAIService()` for
@@ -86,11 +83,5 @@ struct MockAIService: AIService {
             let suffix = i >= pool.count ? " (\(i / pool.count + 1))" : ""
             return CardDraft(front: base.front + suffix, back: base.back, hint: base.hint)
         }
-    }
-
-    func explain(front: String, back: String) async throws -> String {
-        try await Task.sleep(for: .seconds(0.8))
-        return "‘\(front)’의 정답이 ‘\(back)’인 이유를 짚어볼게요. 핵심 개념을 한 번 더 떠올리고, "
-             + "관련 사례를 함께 묶어 기억하면 다음에 틀리지 않습니다. (실제 AI 설명은 추후 연동 예정)"
     }
 }

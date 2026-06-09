@@ -83,32 +83,6 @@ struct StudyView: View {
                 Text(card.back)
                     .font(.pretendard(16, weight: .medium)).lineSpacing(6)
                     .padding(.top, 8)
-
-                if let explanation = session.explanation {
-                    Text(explanation)
-                        .font(.pretendard(13.5, weight: .medium)).foregroundStyle(Theme.primaryInk)
-                        .lineSpacing(4)
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Theme.lav, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .padding(.top, 14)
-                } else {
-                    Button { Task { await session.explainCurrent() } } label: {
-                        HStack(spacing: 7) {
-                            if session.loadingExplanation {
-                                ProgressView().controlSize(.small)
-                            } else {
-                                Image(systemName: "sparkles").font(.system(size: 14))
-                            }
-                            Text("AI 설명 보기").font(.pretendard(13.5, weight: .semibold))
-                        }
-                        .foregroundStyle(Theme.primary)
-                        .padding(.horizontal, 14).padding(.vertical, 9)
-                        .overlay(Capsule().stroke(Theme.line2, lineWidth: 1.5))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 18)
-                }
             } else {
                 Button { session.reveal() } label: {
                     HStack(spacing: 7) {

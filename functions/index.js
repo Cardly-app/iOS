@@ -72,22 +72,3 @@ exports.generateCards = onCall(
     }
   }
 );
-
-/** front + back → short explanation string */
-exports.explainCard = onCall(
-  { secrets: [GROQ_API_KEY], region: REGION },
-  async (req) => {
-    if (!req.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
-
-    const front = String(req.data?.front ?? "").slice(0, 2000);
-    const back = String(req.data?.back ?? "").slice(0, 2000);
-
-    const system = "너는 친절한 학습 튜터야. 한국어로 간결하고 명확하게 설명해.";
-    const user =
-      `플래시카드 질문: ${front}\n정답: ${back}\n\n` +
-      `왜 이 정답이 맞는지 2~3문장으로 친절하게 설명하고, 관련 개념을 짧게 보충해줘.`;
-
-    const explanation = await groqChat(GROQ_API_KEY.value(), system, user);
-    return { explanation };
-  }
-);

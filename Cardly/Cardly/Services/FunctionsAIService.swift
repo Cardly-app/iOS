@@ -29,12 +29,4 @@ struct FunctionsAIService: AIService {
             return CardDraft(front: front, back: back, hint: hint)
         }
     }
-
-    func explain(front: String, back: String) async throws -> String {
-        let result = try await functions.httpsCallable("explainCard").call([
-            "front": front,
-            "back": back,
-        ])
-        return (result.data as? [String: Any])?["explanation"] as? String ?? ""
-    }
 }
